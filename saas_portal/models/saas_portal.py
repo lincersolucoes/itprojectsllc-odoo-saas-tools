@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from odoo import api, exceptions, fields, models
 from odoo.tools import scan_languages
 from odoo.tools.translate import _
-from odoo.addons.base.res.res_partner import _tz_get
+from odoo.addons.base.models.res_partner import _tz_get
 from odoo.tools import DEFAULT_SERVER_DATETIME_FORMAT
 
 from odoo.addons.saas_base.exceptions import MaximumTrialDBException
@@ -16,7 +16,6 @@ from werkzeug.exceptions import Forbidden
 
 import logging
 _logger = logging.getLogger(__name__)
-
 
 @api.multi
 def _compute_host(self):
@@ -56,7 +55,7 @@ class SaasPortalServer(models.Model):
     local_request_scheme = fields.Selection(
         [('http', 'http'), ('https', 'https')], 'Scheme', default='http', required=True)
     host = fields.Char('Host', compute=_compute_host)
-    odoo_version = fields.Char('Odoo version', readonly=True)
+    odoo_version = fields.Char('Odoo version')
     password = fields.Char()
     clients_host_template = fields.Char('Template for clients host names',
                                         help='The possible dynamic parts of the host names are: {dbname}, {base_saas_domain}, {base_saas_domain_1}')
@@ -81,8 +80,9 @@ class SaasPortalServer(models.Model):
         )
         params = {
             'scope': scope,
-            'state': simplejson.dumps(state),
-            'redirect_uri': '{scheme}://{saas_server}:{port}{path}'.format(scheme=scheme, port=port, saas_server=self.host, path=path),
+            'state': simplejson.dumps(state, default=str),
+            #'redirect_uri': '{scheme}://{saas_server}:{port}{path}'.format(scheme=scheme, port=port, saas_server=self.host, path=path),
+            'redirect_uri': '{scheme}://{saas_server}{path}'.format(scheme=scheme, port=port, saas_server=self.host, path=path),
             'response_type': 'token',
             'client_id': client_id,
         }
@@ -118,7 +118,9 @@ class SaasPortalServer(models.Model):
     @api.multi
     def action_redirect_to_server(self):
         r = self[0]
-        url = '{scheme}://{saas_server}:{port}{path}'.format(
+        #url = '{scheme}://{saas_server}:{port}{path}'.format(
+        #    scheme=r.request_scheme, saas_server=r.host, port=r.request_port, path='/web')
+        url = '{scheme}://{saas_server}{path}'.format(
             scheme=r.request_scheme, saas_server=r.host, port=r.request_port, path='/web')
         return {
             'type': 'ir.actions.act_url',
@@ -268,7 +270,6 @@ class SaasPortalPlan(models.Model):
             'login': owner_user.login,
             'name': owner_user.name,
             'email': owner_user.email,
-            'password_crypt': owner_user.password_crypt,
         }
         return owner_user_data
 
@@ -538,8 +539,8 @@ class SaasPortalDatabase(models.Model):
             host = record.host
             port = record.server_id.request_port
             public_url = "%s://%s" % (scheme, host)
-            if scheme == 'http' and port != 80 or scheme == 'https' and port != 443:
-                public_url = public_url + ':' + str(port)
+            #if scheme == 'http' and port != 80 or scheme == 'https' and port != 443:
+            #    public_url = public_url + ':' + str(port)
             record.public_url = public_url + '/'
 
     @api.multi

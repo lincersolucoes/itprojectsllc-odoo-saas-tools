@@ -186,7 +186,7 @@ class SaasServerClient(models.Model):
 
             client_env['res.users'].browse(ADMINUSER_ID).write({
                 'oauth_provider_id': oauth_provider.id,
-                'oauth_uid': SUPERUSER_ID,
+                'oauth_uid': ADMINUSER_ID,
                 'oauth_access_token': access_token
             })
         else:
